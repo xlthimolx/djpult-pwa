@@ -1,0 +1,16 @@
+﻿{
+  "name": "Volleyball DJ Pult",
+  "short_name": "DJ Pult",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
