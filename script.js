@@ -206,7 +206,6 @@ function renderCategories() {
 
       btn.textContent = `${song.icon} ${song.display}`;
       btn.addEventListener("click", () => {
-        console.log("Song click", { id: song.id, category: song.category });
         playAudio(song.url, song.display, song.category, song.id);
       });
 
@@ -408,6 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     level: document.getElementById("zoom-level"),
     inBtn: document.getElementById("zoom-in"),
     outBtn: document.getElementById("zoom-out"),
+    resetBtn: document.getElementById("reset-counts"),
   };
   initZoomControls();
 
@@ -457,7 +457,6 @@ function toggleNowPlayingWarning(remainingSeconds) {
 function incrementPlayCount(id, categoryKey) {
   if (!categoryKey || ["spass"].includes(categoryKey)) return;
   songPlayCounts[id] = (songPlayCounts[id] || 0) + 1;
-  console.log("Increment", { id, categoryKey, value: songPlayCounts[id] });
   savePlayCounts();
   renderSingleCategory(categoryKey);
 }
@@ -537,7 +536,7 @@ function renderSingleCategory(key) {
 }
 
 function initZoomControls() {
-  const { level, inBtn, outBtn } = zoomEls;
+  const { level, inBtn, outBtn, resetBtn } = zoomEls;
   const applyZoom = () => {
     document.documentElement.style.fontSize = `${16 * zoomLevel}px`;
     if (level) level.textContent = `${Math.round(zoomLevel * 100)}%`;
@@ -555,4 +554,15 @@ function initZoomControls() {
       applyZoom();
     });
   }
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      resetPlayCounts();
+    });
+  }
+}
+
+function resetPlayCounts() {
+  songPlayCounts = {};
+  savePlayCounts();
+  renderCategories();
 }
