@@ -7,3 +7,17 @@ body {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
+
+@keyframes np-blink {
+  0%,
+  50% {
+    background-color: #991b1b;
+  }
+  100% {
+    background-color: #7f1d1d;
+  }
+}
+
+.now-playing-warning {
+  animation: np-blink 1s infinite;
+}

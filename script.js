@@ -7,6 +7,7 @@ let volumeLevel = 1.0;
 let fadeIntervalId = null;
 let nowPlaying = { title: "", duration: 0 };
 let nowPlayingEls = { box: null, title: null, eta: null };
+const NOW_PLAYING_WARNING_THRESHOLD = 10; // Sekunden
 
 const IS_IOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -322,6 +323,7 @@ function updateNowPlayingEta(el) {
   if (!eta || !el) return;
   const remaining = (el.duration || 0) - (el.currentTime || 0);
   eta.textContent = formatTime(remaining);
+  toggleNowPlayingWarning(remaining);
 }
 
 function clearNowPlaying() {
@@ -329,6 +331,7 @@ function clearNowPlaying() {
   nowPlaying = { title: "", duration: 0 };
   if (eta) eta.textContent = "--:--";
   if (box) box.classList.add("hidden");
+  toggleNowPlayingWarning(Infinity);
 }
 
 function formatTime(sec) {
@@ -383,3 +386,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   updateSpecialButtons();
 });
+
+function toggleNowPlayingWarning(remainingSeconds) {
+  const { box } = nowPlayingEls;
+  if (!box) return;
+  if (remainingSeconds <= NOW_PLAYING_WARNING_THRESHOLD) {
+    box.classList.add("now-playing-warning");
+  } else {
+    box.classList.remove("now-playing-warning");
+  }
+}
