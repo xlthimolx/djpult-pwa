@@ -1,4 +1,7 @@
 let audioEl = null; // zentrales Audio-Element fuer alle Plattformen
+let audioCtx = null; // Web Audio Kontext (fuer iOS/Volume/Fade)
+let gainNode = null; // Gain fuer Volume/Fade
+let mediaElementSource = null; // MediaElementSource fuer das zentrale Audio
 let currentAudio = null;
 let volumeLevel = 1.0;
 let fadeIntervalId = null;
@@ -128,6 +131,25 @@ function getAudioElement() {
   return audioEl;
 }
 
+function ensureAudioGraph() {
+  const el = getAudioElement();
+  if (!el || typeof AudioContext === "undefined") return null;
+
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (!gainNode) {
+    gainNode = audioCtx.createGain();
+    gainNode.gain.value = volumeLevel;
+  }
+  if (!mediaElementSource) {
+    mediaElementSource = audioCtx.createMediaElementSource(el);
+    mediaElementSource.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+  }
+  return audioCtx;
+}
+
 function renderCategories() {
   const grid = document.getElementById("categories-grid");
   grid.innerHTML = "";
@@ -158,21 +180,27 @@ function playAudio(file) {
     fadeIntervalId = null;
   }
 
+  ensureAudioGraph();
   el.pause();
   el.currentTime = 0;
   el.src = file;
 
-  const targetVolume = volumeLevel;
-  try {
-    el.volume = targetVolume;
-  } catch (err) {
-    console.warn("Konnte Lautstaerke nicht setzen:", err);
+  if (gainNode) {
+    gainNode.gain.value = volumeLevel;
+  } else {
+    const targetVolume = volumeLevel;
+    try {
+      el.volume = targetVolume;
+    } catch (err) {
+      console.warn("Konnte Lautstaerke nicht setzen:", err);
+    }
   }
 
   currentAudio = el;
-  el
-    .play()
-    .catch((err) => console.error("Audio-Wiedergabe blockiert oder fehlgeschlagen:", err));
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch((err) => console.warn("Konnte AudioContext nicht resumieren:", err));
+  }
+  el.play().catch((err) => console.error("Audio-Wiedergabe blockiert oder fehlgeschlagen:", err));
 }
 
 function stopAudio(forceImmediate = false) {
@@ -184,15 +212,31 @@ function stopAudio(forceImmediate = false) {
     fadeIntervalId = null;
   }
 
-  const shouldFade = !IS_IOS && !forceImmediate;
+  const fadeOutTime = 1000;
+  const fadeSteps = 30;
+  const fadeInterval = fadeOutTime / fadeSteps;
+  const canGainFade = !!gainNode;
+  const shouldFade = !forceImmediate;
 
-  if (shouldFade) {
-    const fadeOutTime = 1000;
-    const fadeSteps = 30;
-    const fadeInterval = fadeOutTime / fadeSteps;
+  if (shouldFade && canGainFade) {
+    const startGain = gainNode.gain.value || volumeLevel || 1;
+    const gainStep = startGain / fadeSteps;
+    fadeIntervalId = setInterval(() => {
+      const next = gainNode.gain.value - gainStep;
+      if (next > 0) {
+        gainNode.gain.value = next;
+      } else {
+        clearInterval(fadeIntervalId);
+        fadeIntervalId = null;
+        gainNode.gain.value = volumeLevel; // reset fuer naechsten Start
+        el.pause();
+        el.currentTime = 0;
+        currentAudio = null;
+      }
+    }, fadeInterval);
+  } else if (shouldFade && !IS_IOS) {
     const initialVolume = el.volume > 0 ? el.volume : volumeLevel || 1;
     const volumeStep = initialVolume / fadeSteps;
-
     fadeIntervalId = setInterval(() => {
       if (el.volume > volumeStep) {
         el.volume -= volumeStep;
@@ -218,12 +262,10 @@ function setVolume(value) {
   const el = getAudioElement();
   if (!el) return;
 
-  if (IS_IOS) {
-    try {
-      el.volume = volumeLevel;
-    } catch (err) {
-      console.info("iOS erlaubt ggf. keine programmatische Lautstaerke:", err);
-    }
+  ensureAudioGraph();
+
+  if (gainNode) {
+    gainNode.gain.value = volumeLevel;
     return;
   }
 
