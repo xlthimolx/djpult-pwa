@@ -223,12 +223,12 @@ function stopAudio(forceImmediate = false) {
     const gainStep = startGain / fadeSteps;
     fadeIntervalId = setInterval(() => {
       const next = gainNode.gain.value - gainStep;
-      if (next > 0) {
+      if (next > 0.001) {
         gainNode.gain.value = next;
       } else {
         clearInterval(fadeIntervalId);
         fadeIntervalId = null;
-        gainNode.gain.value = volumeLevel; // reset fuer naechsten Start
+        gainNode.gain.value = 0.001; // leises Ende, kein Hochspringen
         el.pause();
         el.currentTime = 0;
         currentAudio = null;
@@ -238,11 +238,12 @@ function stopAudio(forceImmediate = false) {
     const initialVolume = el.volume > 0 ? el.volume : volumeLevel || 1;
     const volumeStep = initialVolume / fadeSteps;
     fadeIntervalId = setInterval(() => {
-      if (el.volume > volumeStep) {
+      if (el.volume > volumeStep + 0.001) {
         el.volume -= volumeStep;
       } else {
         clearInterval(fadeIntervalId);
         fadeIntervalId = null;
+        el.volume = 0.001; // leises Ende, dann Stopp
         el.pause();
         el.currentTime = 0;
         currentAudio = null;
