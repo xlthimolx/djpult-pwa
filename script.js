@@ -1,5 +1,11 @@
-﻿let currentAudio = null;
+let audioEl = null; // zentrales Audio-Element fuer alle Plattformen
+let currentAudio = null;
 let volumeLevel = 1.0;
+let fadeIntervalId = null;
+
+const IS_IOS =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes("Mac") && "ontouchend" in document);
 
 const categories = {
   ass_angriff: { title: "Ass/Angriff", color: "bg-blue-600", items: [] },
@@ -104,6 +110,24 @@ function handleFiles(fileList) {
   updateSpecialButtons();
 }
 
+function getAudioElement() {
+  if (audioEl) return audioEl;
+  const existing = document.getElementById("dj-audio");
+  if (existing) {
+    audioEl = existing;
+  } else {
+    const el = document.createElement("audio");
+    el.id = "dj-audio";
+    el.setAttribute("playsinline", "true");
+    el.preload = "none";
+    el.className = "hidden";
+    document.body.appendChild(el);
+    audioEl = el;
+  }
+  audioEl.setAttribute("playsinline", "true");
+  return audioEl;
+}
+
 function renderCategories() {
   const grid = document.getElementById("categories-grid");
   grid.innerHTML = "";
@@ -126,35 +150,88 @@ function renderCategories() {
 }
 
 function playAudio(file) {
-  if (currentAudio) {
-    currentAudio.pause();
+  const el = getAudioElement();
+  if (!el) return;
+
+  if (fadeIntervalId) {
+    clearInterval(fadeIntervalId);
+    fadeIntervalId = null;
   }
-  currentAudio = new Audio(file);
-  currentAudio.volume = volumeLevel;
-  currentAudio.play();
+
+  el.pause();
+  el.currentTime = 0;
+  el.src = file;
+
+  const targetVolume = volumeLevel;
+  try {
+    el.volume = targetVolume;
+  } catch (err) {
+    console.warn("Konnte Lautstaerke nicht setzen:", err);
+  }
+
+  currentAudio = el;
+  el
+    .play()
+    .catch((err) => console.error("Audio-Wiedergabe blockiert oder fehlgeschlagen:", err));
 }
 
-function stopAudio() {
-  if (currentAudio) {
+function stopAudio(forceImmediate = false) {
+  const el = getAudioElement();
+  if (!el || !currentAudio) return;
+
+  if (fadeIntervalId) {
+    clearInterval(fadeIntervalId);
+    fadeIntervalId = null;
+  }
+
+  const shouldFade = !IS_IOS && !forceImmediate;
+
+  if (shouldFade) {
     const fadeOutTime = 1000;
     const fadeSteps = 30;
     const fadeInterval = fadeOutTime / fadeSteps;
-    const volumeStep = currentAudio.volume / fadeSteps;
-    const fadeOut = setInterval(() => {
-      if (currentAudio.volume > volumeStep) {
-        currentAudio.volume -= volumeStep;
+    const initialVolume = el.volume > 0 ? el.volume : volumeLevel || 1;
+    const volumeStep = initialVolume / fadeSteps;
+
+    fadeIntervalId = setInterval(() => {
+      if (el.volume > volumeStep) {
+        el.volume -= volumeStep;
       } else {
-        clearInterval(fadeOut);
-        currentAudio.pause();
+        clearInterval(fadeIntervalId);
+        fadeIntervalId = null;
+        el.pause();
+        el.currentTime = 0;
         currentAudio = null;
       }
     }, fadeInterval);
+  } else {
+    el.pause();
+    el.currentTime = 0;
+    currentAudio = null;
   }
 }
 
 function setVolume(value) {
-  volumeLevel = value;
-  if (currentAudio) currentAudio.volume = volumeLevel;
+  const numeric = Math.min(1, Math.max(0, parseFloat(value) || 0));
+  volumeLevel = numeric;
+
+  const el = getAudioElement();
+  if (!el) return;
+
+  if (IS_IOS) {
+    try {
+      el.volume = volumeLevel;
+    } catch (err) {
+      console.info("iOS erlaubt ggf. keine programmatische Lautstaerke:", err);
+    }
+    return;
+  }
+
+  try {
+    el.volume = volumeLevel;
+  } catch (err) {
+    console.warn("Konnte Lautstaerke nicht setzen:", err);
+  }
 }
 
 function updateSpecialButtons() {
@@ -178,6 +255,12 @@ function updateSpecialButtons() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  audioEl = getAudioElement();
+  if (audioEl) {
+    audioEl.preload = "none";
+    audioEl.setAttribute("playsinline", "true");
+  }
+
   const fileInput = document.getElementById("filepicker");
   const loadButton = document.getElementById("load-songs-btn");
   const btnTimeout = document.getElementById("btn-timeout");
