@@ -577,12 +577,27 @@ function playRandomTrack() {
   candidateCategories.forEach((key) => {
     const cat = categories[key];
     if (!cat || !cat.items || cat.items.length === 0) return;
-    cat.items.forEach((song) => pool.push({ song, category: key }));
+    cat.items.forEach((song) => {
+      const count = songPlayCounts[song.id] || 0;
+      // Gewicht: je geringer der Count, desto hoeher das Gewicht (1 / (1+count)), Mindestgewicht 0.1
+      const weight = Math.max(0.1, 1 / (1 + count));
+      pool.push({ song, category: key, weight });
+    });
   });
   if (pool.length === 0) {
     alert("Keine Songs in den zufaelligen Kategorien geladen.");
     return;
   }
-  const pick = pool[Math.floor(Math.random() * pool.length)];
-  playAudio(pick.song.url, pick.song.display, pick.category, pick.song.id);
+  const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+  const r = Math.random() * totalWeight;
+  let acc = 0;
+  let chosen = pool[0];
+  for (const item of pool) {
+    acc += item.weight;
+    if (r <= acc) {
+      chosen = item;
+      break;
+    }
+  }
+  playAudio(chosen.song.url, chosen.song.display, chosen.category, chosen.song.id);
 }
