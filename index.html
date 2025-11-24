@@ -39,7 +39,7 @@
   </div>
 
   <!-- Untere Leiste mit Spezial-Buttons -->
-  <div class="w-full grid grid-cols-5 justify-between gap-4 bg-gray-800 p-4 rounded-lg mt-2 fixed bottom-0 left-0 z-50">
+  <div class="w-full grid grid-cols-6 justify-between gap-4 bg-gray-800 p-4 rounded-lg mt-2 fixed bottom-0 left-0 z-50">
     <div class="grid grid-cols-1 mt-4 gap-4 w-full">
       <button id="btn-timeout"
         class="bg-yellow-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3">
@@ -61,6 +61,9 @@
       </button>
     </div>
     <div class="px-10 py-10 flex flex-col items-center w-full"></div>
+    <button onclick="playRandomTrack()" class="px-7 py-7 bg-indigo-600 rounded-lg hover:bg-indigo-800 text-lg">
+      Zufall
+    </button>
     <button onclick="stopAudio()" class="px-7 py-7 bg-red-600 rounded-lg hover:bg-red-800 text-lg">
       Stop
     </button>

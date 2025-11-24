@@ -570,3 +570,19 @@ function resetPlayCounts() {
   console.log("Reset play counts");
   renderCategories();
 }
+
+function playRandomTrack() {
+  const candidateCategories = ["ass_angriff", "block", "sonstiges", "noch_mehr", "noch_mehr2"];
+  const pool = [];
+  candidateCategories.forEach((key) => {
+    const cat = categories[key];
+    if (!cat || !cat.items || cat.items.length === 0) return;
+    cat.items.forEach((song) => pool.push({ song, category: key }));
+  });
+  if (pool.length === 0) {
+    alert("Keine Songs in den zufaelligen Kategorien geladen.");
+    return;
+  }
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  playAudio(pick.song.url, pick.song.display, pick.category, pick.song.id);
+}
