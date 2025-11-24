@@ -579,8 +579,9 @@ function playRandomTrack() {
     if (!cat || !cat.items || cat.items.length === 0) return;
     cat.items.forEach((song) => {
       const count = songPlayCounts[song.id] || 0;
-      // Gewicht: je geringer der Count, desto hoeher das Gewicht (1 / (1+count)), Mindestgewicht 0.1
-      const weight = Math.max(0.1, 1 / (1 + count));
+      // Stärkere Gewichtung: weniger gespielte Titel werden deutlich bevorzugt
+      // Gewicht = 1 / (1 + count)^2, Mindestgewicht 0.02
+      const weight = Math.max(0.02, 1 / Math.pow(1 + count, 2));
       pool.push({ song, category: key, weight });
     });
   });
