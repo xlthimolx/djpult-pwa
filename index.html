@@ -19,6 +19,20 @@
         <div id="now-playing-title" class="font-semibold truncate">--</div>
         <div id="now-playing-eta" class="text-xs text-gray-300">--:--</div>
       </div>
+      <!-- Info / Release Notes -->
+      <button id="info-toggle" onclick="toggleInfo()" class="fixed top-2 right-80 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow hover:bg-gray-700">
+        Info
+      </button>
+      <div id="info-panel" class="fixed top-10 right-10 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow max-w-sm hidden info-panel">
+        <div class="font-semibold mb-1">Aktuelle Änderungen</div>
+        <ul class="list-disc list-inside space-y-1">
+          <li>Zufalls-Button: gewichtet nach wenigen Plays (bevorzugt selten gespielte Titel) aus Ass/Block/Sonstiges-Spalten.</li>
+          <li>Play-Counter & Heatmap: Badges, Gewichtung pro Kategorie (außer Spaß/Specials), lokal gespeichert.</li>
+          <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
+          <li>Reset-Button: setzt alle Play-Counter zurück.</li>
+          <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei <10s.</li>
+        </ul>
+      </div>
       <!-- Zoom Controls -->
       <div class="fixed top-2 left-2 bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow flex items-center space-x-2">
         <span>Zoom</span>

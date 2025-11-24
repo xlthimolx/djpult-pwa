@@ -14,6 +14,7 @@ const ZOOM_MIN = 0.8;
 const ZOOM_MAX = 1.2;
 const ZOOM_STEP = 0.05;
 let zoomEls = { level: null, inBtn: null, outBtn: null };
+let infoEls = { panel: null, toggle: null };
 
 const IS_IOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -406,6 +407,10 @@ document.addEventListener("DOMContentLoaded", () => {
     title: document.getElementById("now-playing-title"),
     eta: document.getElementById("now-playing-eta"),
   };
+  infoEls = {
+    panel: document.getElementById("info-panel"),
+    toggle: document.getElementById("info-toggle"),
+  };
   zoomEls = {
     level: document.getElementById("zoom-level"),
     inBtn: document.getElementById("zoom-in"),
@@ -569,6 +574,12 @@ function resetPlayCounts() {
   savePlayCounts();
   console.log("Reset play counts");
   renderCategories();
+}
+
+function toggleInfo() {
+  const panel = infoEls.panel || document.getElementById("info-panel");
+  if (!panel) return;
+  panel.classList.toggle("hidden");
 }
 
 function playRandomTrack() {

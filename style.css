@@ -8,6 +8,11 @@ body {
   padding-bottom: 0.5rem;
 }
 
+.info-panel {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 @keyframes np-blink {
   0%,
   50% {
