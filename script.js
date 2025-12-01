@@ -220,6 +220,7 @@ function renderCategories() {
       btn.textContent = `${song.icon} ${song.display}`;
       btn.addEventListener("click", () => {
         playAudio(song.url, song.display, song.category, song.id);
+        clearSearch();
       });
 
       if (isHeatmapCategory) {
@@ -550,6 +551,7 @@ function renderSingleCategory(key) {
     btn.addEventListener("click", () => {
       console.log("Song click", { id: song.id, category: song.category });
       playAudio(song.url, song.display, song.category, song.id);
+      clearSearch();
     });
 
     if (isHeatmapCategory) {
@@ -600,12 +602,14 @@ function resetPlayCounts() {
 function initSearchControls() {
   const { input } = searchEls;
   if (!input) return;
-  const applySearch = (value) => {
-    searchTerm = (value || "").trim().toLowerCase();
-    renderCategories();
-  };
-  input.addEventListener("input", (e) => applySearch(e.target.value));
-  applySearch("");
+  input.addEventListener("input", (e) => setSearchTerm(e.target.value));
+  setSearchTerm("");
+}
+
+function setSearchTerm(value) {
+  const normalized = (value || "").trim().toLowerCase();
+  searchTerm = normalized;
+  renderCategories();
 }
 
 function matchesSearch(song) {
@@ -630,6 +634,15 @@ function updateSearchCount(count) {
   if (!el) return;
   const value = searchTerm ? count : 0;
   el.textContent = `${value} Treffer`;
+}
+
+function clearSearch() {
+  if (!searchTerm) return;
+  searchTerm = "";
+  if (searchEls.input) {
+    searchEls.input.value = "";
+  }
+  renderCategories();
 }
 
 function toggleInfo() {
