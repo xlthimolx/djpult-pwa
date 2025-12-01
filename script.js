@@ -15,6 +15,8 @@ const ZOOM_MAX = 1.2;
 const ZOOM_STEP = 0.05;
 let zoomEls = { level: null, inBtn: null, outBtn: null };
 let infoEls = { panel: null, toggle: null };
+let searchTerm = "";
+let searchEls = { input: null, count: null };
 
 const IS_IOS =
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -169,6 +171,7 @@ function ensureAudioGraph() {
 function renderCategories() {
   const grid = document.getElementById("categories-grid");
   grid.innerHTML = "";
+  let totalMatches = 0;
   Object.entries(categories).forEach(([key, cat]) => {
     const col = document.createElement("div");
     col.innerHTML = `
@@ -194,6 +197,8 @@ function renderCategories() {
     }
 
     cat.items.forEach((song) => {
+      const isMatch = matchesSearch(song);
+      if (isMatch) totalMatches += 1;
       const btn = document.createElement("button");
       btn.className = `song-button px-4 py-2 text-lg rounded-lg hover:opacity-80 w-full ${cat.color} relative`;
 
@@ -206,6 +211,10 @@ function renderCategories() {
         const [h, s, l] = cat.baseHSL;
         const lightness = Math.min(90, l + intensity * 12);
         btn.style.backgroundColor = `hsl(${h}, ${s}%, ${lightness}%)`;
+      }
+
+      if (isMatch) {
+        btn.classList.add("search-hit");
       }
 
       btn.textContent = `${song.icon} ${song.display}`;
@@ -224,6 +233,7 @@ function renderCategories() {
       container.appendChild(btn);
     });
   });
+  updateSearchCount(totalMatches);
 }
 
 function playAudio(file, displayTitle = "", categoryKey = null, songId = null) {
@@ -417,7 +427,12 @@ document.addEventListener("DOMContentLoaded", () => {
     outBtn: document.getElementById("zoom-out"),
     resetBtn: document.getElementById("reset-counts"),
   };
+  searchEls = {
+    input: document.getElementById("search-input"),
+    count: document.getElementById("search-count"),
+  };
   initZoomControls();
+  initSearchControls();
 
   const fileInput = document.getElementById("filepicker");
   const loadButton = document.getElementById("load-songs-btn");
@@ -512,6 +527,7 @@ function renderSingleCategory(key) {
   }
 
   cat.items.forEach((song) => {
+    const isMatch = matchesSearch(song);
     const btn = document.createElement("button");
     btn.className = `song-button px-4 py-2 text-lg rounded-lg hover:opacity-80 w-full ${cat.color} relative`;
 
@@ -524,6 +540,10 @@ function renderSingleCategory(key) {
       const [h, s, l] = cat.baseHSL;
       const lightness = Math.min(90, l + intensity * 12);
       btn.style.backgroundColor = `hsl(${h}, ${s}%, ${lightness}%)`;
+    }
+
+    if (isMatch) {
+      btn.classList.add("search-hit");
     }
 
     btn.textContent = `${song.icon} ${song.display}`;
@@ -541,6 +561,7 @@ function renderSingleCategory(key) {
 
     container.appendChild(btn);
   });
+  updateSearchCount(countSearchHits());
 }
 
 function initZoomControls() {
@@ -574,6 +595,41 @@ function resetPlayCounts() {
   savePlayCounts();
   console.log("Reset play counts");
   renderCategories();
+}
+
+function initSearchControls() {
+  const { input } = searchEls;
+  if (!input) return;
+  const applySearch = (value) => {
+    searchTerm = (value || "").trim().toLowerCase();
+    renderCategories();
+  };
+  input.addEventListener("input", (e) => applySearch(e.target.value));
+  applySearch("");
+}
+
+function matchesSearch(song) {
+  if (!searchTerm) return false;
+  const haystack = `${song.display || ""} ${song.name || ""}`.toLowerCase();
+  return haystack.includes(searchTerm);
+}
+
+function countSearchHits() {
+  if (!searchTerm) return 0;
+  let hits = 0;
+  Object.values(categories).forEach((cat) => {
+    cat.items.forEach((song) => {
+      if (matchesSearch(song)) hits += 1;
+    });
+  });
+  return hits;
+}
+
+function updateSearchCount(count) {
+  const el = searchEls.count;
+  if (!el) return;
+  const value = searchTerm ? count : 0;
+  el.textContent = `${value} Treffer`;
 }
 
 function toggleInfo() {

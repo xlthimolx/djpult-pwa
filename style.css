@@ -26,3 +26,13 @@ body {
 .now-playing-warning {
   animation: np-blink 1s infinite;
 }
+
+.search-input {
+  width: 170px;
+}
+
+.search-hit {
+  outline: 3px solid #fbbf24;
+  color: #0f172a;
+  background-color: #fef3c7 !important;
+}
