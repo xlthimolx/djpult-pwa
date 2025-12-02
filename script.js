@@ -57,8 +57,7 @@ function cleanName(filename) {
     .replace(/_FUN/i, "")
     .replace(/_TIMEOUT/i, "")
     .replace(/_WALKON/i, "")
-    .replace(/_PAUSE1/i, "")
-    .replace(/_PAUSE2/i, "")
+    .replace(/_PAUSE\d*/i, "")
     .replace(/\.(mp3|flac|wav|ogg)$/i, "")
     .trim();
 }
