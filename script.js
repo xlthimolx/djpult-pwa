@@ -615,16 +615,20 @@ function resetPlayCounts() {
 function collapseHeader() {
   if (!headerEls.block) return;
   headerEls.block.classList.add("header-hidden");
+  headerEls.block.style.display = "none";
   if (headerEls.toggle) {
     headerEls.toggle.textContent = "Kopf einblenden";
+    headerEls.toggle.dataset.collapsed = "true";
   }
 }
 
 function toggleHeaderVisibility() {
   if (!headerEls.block) return;
   const hidden = headerEls.block.classList.toggle("header-hidden");
+  headerEls.block.style.display = hidden ? "none" : "";
   if (headerEls.toggle) {
     headerEls.toggle.textContent = hidden ? "Kopf einblenden" : "Kopf ausblenden";
+    headerEls.toggle.dataset.collapsed = hidden ? "true" : "false";
   }
 }
 
