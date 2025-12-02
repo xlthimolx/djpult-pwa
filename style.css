@@ -1,5 +1,6 @@
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
 }
 
 .song-button {
