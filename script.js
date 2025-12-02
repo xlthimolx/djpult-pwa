@@ -611,7 +611,8 @@ function renderPauseButtons() {
 
   const sorted = [...specialTracks.pauses].sort((a, b) => (a.number || 0) - (b.number || 0));
   sorted.forEach((track, idx) => {
-    const label = track.display || `Pause ${track.number || idx + 1}`;
+    const base = track.display || `Pause ${track.number || idx + 1}`;
+    const label = `Pause: ${base}`;
     const btn = document.createElement("button");
     btn.className = "bg-orange-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3";
     btn.textContent = label;
