@@ -705,3 +705,31 @@ function playRandomTrack() {
   }
   playAudio(chosen.song.url, chosen.song.display, chosen.category, chosen.song.id);
 }
+
+function playRandomOpponentTrack() {
+  const cat = categories["gegner"];
+  const pool = [];
+  if (cat && Array.isArray(cat.items)) {
+    cat.items.forEach((song) => {
+      const count = songPlayCounts[song.id] || 0;
+      const weight = Math.max(0.01, 1 / Math.pow(1 + count, 3));
+      pool.push({ song, weight });
+    });
+  }
+  if (pool.length === 0) {
+    alert("Keine Songs in der Gegner-Kategorie geladen.");
+    return;
+  }
+  const totalWeight = pool.reduce((sum, item) => sum + item.weight, 0);
+  const r = Math.random() * totalWeight;
+  let acc = 0;
+  let chosen = pool[0];
+  for (const item of pool) {
+    acc += item.weight;
+    if (r <= acc) {
+      chosen = item;
+      break;
+    }
+  }
+  playAudio(chosen.song.url, chosen.song.display, "gegner", chosen.song.id);
+}
