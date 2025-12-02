@@ -45,8 +45,7 @@ const icons = {
 const specialTracks = {
   timeout: null,
   walkon: null,
-  pause1: null,
-  pause2: null,
+  pauses: [],
 };
 
 function cleanName(filename) {
@@ -68,9 +67,9 @@ function resetCategories() {
   Object.values(categories).forEach((cat) => {
     cat.items = [];
   });
-  Object.keys(specialTracks).forEach((k) => {
-    specialTracks[k] = null;
-  });
+  specialTracks.timeout = null;
+  specialTracks.walkon = null;
+  specialTracks.pauses = [];
 }
 
 function handleFiles(fileList) {
@@ -93,10 +92,18 @@ function handleFiles(fileList) {
       let key = null;
       if (upper.includes("_TIMEOUT")) key = "timeout";
       else if (upper.includes("_WALKON")) key = "walkon";
-      else if (upper.includes("_PAUSE1")) key = "pause1";
-      else if (upper.includes("_PAUSE2")) key = "pause2";
+      else if (/_PAUSE\d+/i.test(upper)) key = "pause";
 
-      if (key) {
+      if (key === "pause") {
+        const match = upper.match(/_PAUSE(\d+)/);
+        const number = match ? parseInt(match[1], 10) : specialTracks.pauses.length + 1;
+        specialTracks.pauses.push({
+          name: file.name,
+          display: cleanName(file.name),
+          number,
+          url: URL.createObjectURL(file),
+        });
+      } else if (key) {
         specialTracks[key] = {
           name: file.name,
           display: cleanName(file.name),
@@ -353,8 +360,6 @@ function updateSpecialButtons() {
   const map = [
     { id: "btn-timeout", key: "timeout", fallback: "Timeout", prefix: "" },
     { id: "btn-walkon", key: "walkon", fallback: "Walk-On", prefix: "" },
-    { id: "btn-pause1", key: "pause1", fallback: "Pause 1", prefix: "Pause: " },
-    { id: "btn-pause2", key: "pause2", fallback: "Pause 2", prefix: "Pause: " },
   ];
 
   map.forEach(({ id, key, fallback, prefix }) => {
@@ -367,6 +372,8 @@ function updateSpecialButtons() {
       btn.textContent = fallback;
     }
   });
+
+  renderPauseButtons();
 }
 
 function showNowPlaying(title = "") {
@@ -439,8 +446,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const loadButton = document.getElementById("load-songs-btn");
   const btnTimeout = document.getElementById("btn-timeout");
   const btnWalkon = document.getElementById("btn-walkon");
-  const btnPause1 = document.getElementById("btn-pause1");
-  const btnPause2 = document.getElementById("btn-pause2");
 
   if (loadButton && fileInput) {
     loadButton.addEventListener("click", () => fileInput.click());
@@ -461,8 +466,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   bindSpecial(btnTimeout, "timeout", "Timeout");
   bindSpecial(btnWalkon, "walkon", "Walk-On");
-  bindSpecial(btnPause1, "pause1", "Pause 1");
-  bindSpecial(btnPause2, "pause2", "Pause 2");
 
   updateSpecialButtons();
   loadPlayCounts();
@@ -597,6 +600,26 @@ function resetPlayCounts() {
   savePlayCounts();
   console.log("Reset play counts");
   renderCategories();
+}
+
+function renderPauseButtons() {
+  const container = document.getElementById("pause-buttons");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!Array.isArray(specialTracks.pauses) || specialTracks.pauses.length === 0) return;
+
+  const sorted = [...specialTracks.pauses].sort((a, b) => (a.number || 0) - (b.number || 0));
+  sorted.forEach((track, idx) => {
+    const label = track.display || `Pause ${track.number || idx + 1}`;
+    const btn = document.createElement("button");
+    btn.className = "bg-orange-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3";
+    btn.textContent = label;
+    btn.addEventListener("click", () => {
+      playAudio(track.url, label);
+    });
+    container.appendChild(btn);
+  });
 }
 
 function initSearchControls() {
