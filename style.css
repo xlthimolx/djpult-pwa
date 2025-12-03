@@ -7,6 +7,12 @@ body {
   overflow: auto;
 }
 
+.sticky-card {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+}
+
 .song-button {
   width: 100%;
   padding-top: 0.5rem;
