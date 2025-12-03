@@ -1,5 +1,6 @@
 body {
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
 }
 
 .song-button {
@@ -25,4 +26,37 @@ body {
 
 .now-playing-warning {
   animation: np-blink 1s infinite;
+}
+
+.search-input {
+  width: 170px;
+}
+
+.search-hit {
+  outline: 3px solid #fbbf24;
+  color: #0f172a;
+  background-color: #fef3c7 !important;
+}
+
+.header-hidden {
+  display: none;
+}
+
+.header-collapsed #categories-grid {
+  margin-top: 40px;
+}
+
+.category-col {
+  height: 100%;
+}
+
+.category-list {
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+  padding: 0 4px 80px 0; /* kleinerer Bottom-Puffer, damit die letzten Items sichtbar bleiben */
+}
+
+.header-collapsed .category-list {
+  max-height: calc(100vh - 260px);
+  padding-bottom: 60px;
 }

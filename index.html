@@ -9,10 +9,18 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body class="flex h-screen bg-gray-900 text-white">
-    <div class="w-full flex flex-col p-6 overflow-y-auto pb-40">
-      <div class="flex items-center justify-center mb-6">
-        <h1 class="text-4xl font-bold mr-4">DJ Pult</h1>
-        <img src="static/images/thumbnail_logo.png" alt="logo" class="h-15 w-12 shadow-lg" />
+    <div class="w-full flex flex-col p-6 overflow-hidden pb-40">
+      <div id="header-block" class="flex flex-col items-center justify-center mb-6 space-y-4">
+        <div class="flex items-center justify-center">
+          <h1 class="text-4xl font-bold mr-4">DJ Pult</h1>
+          <img src="static/images/thumbnail_logo.png" alt="logo" class="h-15 w-12 shadow-lg" />
+        </div>
+        <div class="flex items-center justify-center mb-4 space-x-3">
+          <button id="load-songs-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">
+            Songs laden
+          </button>
+          <input id="filepicker" type="file" class="hidden" accept="audio/*" multiple webkitdirectory />
+        </div>
       </div>
       <!-- Now Playing Banner -->
       <div id="now-playing" class="fixed top-2 right-2 bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow hidden w-72 max-w-sm">
@@ -20,18 +28,42 @@
         <div id="now-playing-eta" class="text-xs text-gray-300">--:--</div>
       </div>
       <!-- Info / Release Notes -->
+      <div class="fixed top-2 right-96 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow flex items-center space-x-2">
+        <span class="text-xs">Vol</span>
+        <input type="range" id="volume" min="0" max="1" step="0.05" value="1.0"
+          class="horizontal-slider w-32"
+          oninput="setVolume(this.value)">
+      </div>
       <button id="info-toggle" onclick="toggleInfo()" class="fixed top-2 right-80 bg-gray-800 text-white text-xs px-2 py-1 rounded shadow hover:bg-gray-700">
         Info
       </button>
-      <div id="info-panel" class="fixed top-10 right-10 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow max-w-sm hidden info-panel">
-        <div class="font-semibold mb-1">Aktuelle Änderungen</div>
-        <ul class="list-disc list-inside space-y-1">
-          <li>Zufalls-Button: gewichtet nach wenigen Plays (bevorzugt selten gespielte Titel) aus Ass/Block/Sonstiges-Spalten.</li>
-          <li>Play-Counter & Heatmap: Badges, Gewichtung pro Kategorie (außer Spaß/Specials), lokal gespeichert.</li>
-          <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
-          <li>Reset-Button: setzt alle Play-Counter zurück.</li>
-          <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei <10s.</li>
-        </ul>
+      <div id="info-panel" class="fixed top-10 right-10 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow max-w-sm hidden info-panel z-50">
+        <div class="space-y-2">
+          <div>
+            <div class="font-semibold">Funktionen</div>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Suche: Treffer werden hervorgehoben und die Suche leert sich nach Klick auf einen Song.</li>
+              <li>Zufall: gewichtet selten gespielte Titel h&ouml;her; Gegner-Zufall nutzt nur Kategorie Gegner.</li>
+              <li>Play-Counter &amp; Heatmap: Badges, Gewichtung pro Kategorie (au&szlig;er Spa&szlig;/Specials), lokal gespeichert.</li>
+              <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
+              <li>Reset-Button: setzt alle Play-Counter zur&uuml;ck.</li>
+              <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei &lt;10s.</li>
+              <li><strong>Tagging</strong>: `_HIT`/`_ACE` &rarr; Ass/Angriff, `_BLOCK` &rarr; Block, `_OPP` &rarr; Gegner, `_FUN` &rarr; Lustig. Ohne Tag &rarr; Sonstiges/Noch mehr.</li>
+              <li><strong>Spezial-Tracks</strong> (`special_music/`): `_TIMEOUT`, `_WALKON`, `_PAUSE1/2/3...` f&uuml;r Spezial-Buttons; Pausen werden dynamisch gelistet.</li>
+              <li><strong>Ablage</strong>: Normale Musikdateien in `static/music/` (oder geladenes Verzeichnis); Spezialtracks in `static/special_music/`.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-semibold">Aktuelle Änderungen</div>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Suche mit Auto-Clear &amp; Highlight.</li>
+              <li>Gewichtete Zuf&auml;lle (Standard + Gegner).</li>
+              <li>Header einklappbar f&uuml;r mehr Platz.</li>
+              <li>Pause-Buttons dynamisch aus `_PAUSE`-Tracks.</li>
+              <li>Scroll-Anpassungen: Kategorien scrollen getrennt, globales Scroll deaktiviert.</li>
+            </ul>
+          </div>
+        </div>
       </div>
       <!-- Zoom Controls -->
       <div class="fixed top-2 left-2 bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow flex items-center space-x-2">
@@ -40,13 +72,14 @@
         <span id="zoom-level" class="w-10 text-center">100%</span>
         <button id="zoom-in" class="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">+</button>
         <button id="reset-counts" class="ml-2 px-2 py-1 bg-red-700 hover:bg-red-600 rounded">Reset</button>
-      </div>
-      <div class="flex items-center justify-center mb-4 space-x-3">
-        <button id="load-songs-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">
-          Songs laden
+        <div class="ml-3 flex items-center space-x-2">
+          <input id="search-input" type="search" placeholder="Song suchen" class="search-input text-black px-2 py-1 rounded" />
+          <span id="search-count" class="text-xs text-gray-300">0 Treffer</span>
+        </div>
+        <button id="toggle-header" class="ml-3 bg-gray-700 text-white text-xs px-2 py-1 rounded shadow hover:bg-gray-600">
+          Kopf ausblenden
         </button>
-        <input id="filepicker" type="file" class="hidden" accept="audio/*" multiple webkitdirectory />
-    </div>
+      </div>
 
     <!-- Song-Kategorien (werden per JS gefüllt) -->
     <div class="grid grid-cols-7 gap-4 w-full" id="categories-grid"></div>
@@ -54,39 +87,26 @@
 
   <!-- Untere Leiste mit Spezial-Buttons -->
   <div class="w-full grid grid-cols-6 justify-between gap-4 bg-gray-800 p-4 rounded-lg mt-2 fixed bottom-0 left-0 z-50">
-    <div class="grid grid-cols-1 mt-4 gap-4 w-full">
-      <button id="btn-timeout"
-        class="bg-yellow-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3">
-        Timeout
-      </button>
+      <div class="grid grid-cols-1 mt-4 gap-4 w-full">
+        <button id="btn-timeout"
+          class="bg-yellow-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3">
+          Timeout
+        </button>
       <button id="btn-walkon"
         class="bg-blue-500 rounded-lg hover:bg-blue-700 text-xl px-3 py-3">
         Walk-On
       </button>
     </div>
-    <div class="grid grid-cols-1 mt-4 gap-4 w-full">
-      <button id="btn-pause1"
-        class="bg-orange-500 rounded-lg hover:bg-yellow-700 text-xl px-3 py-3">
-        Pause 1
-      </button>
-      <button id="btn-pause2"
-        class="bg-orange-500 rounded-lg hover:bg-blue-700 text-xl px-3 py-3">
-        Pause 2
-      </button>
-    </div>
-    <div class="px-10 py-10 flex flex-col items-center w-full"></div>
+    <div id="pause-buttons" class="grid grid-cols-2 mt-4 gap-3 w-full col-span-2"></div>
     <button onclick="playRandomTrack()" class="px-7 py-7 bg-indigo-600 rounded-lg hover:bg-indigo-800 text-lg">
       Zufall (eigene Punkte)
+    </button>
+    <button onclick="playRandomOpponentTrack()" class="px-7 py-7 bg-indigo-500 rounded-lg hover:bg-indigo-700 text-lg">
+      Zufall (Gegnerpunkte)
     </button>
     <button onclick="stopAudio()" class="px-7 py-7 bg-red-600 rounded-lg hover:bg-red-800 text-lg">
       Stop
     </button>
-    <div class="px-7 py-7 flex flex-col items-center bottom-0 w-full">
-      <label for="volume" class="mb-1 text-lg text-center">Vol</label>
-      <input type="range" id="volume" min="0" max="1" step="0.05" value="1.0"
-        class="horizontal-slider w-full"
-        oninput="setVolume(this.value)">
-    </div>
   </div>
 
   <!-- Zentrales Audio-Element fuer Desktop & iOS -->
