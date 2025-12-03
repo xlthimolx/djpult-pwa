@@ -7,25 +7,29 @@ const remoteCategories = [
   { key: "noch_mehr2", title: "Noch mehr 2", color: "bg-green-600" },
 ];
 
+const STORAGE_KEYS = {
+  offer: "rtc.offer",
+  answer: "rtc.answer",
+  offerText: "rtc.offer.text",
+  answerText: "rtc.answer.text",
+};
+
 const rtc = {
   pc: null,
   channel: null,
   candidates: [],
   status: "disconnected",
   ui: {},
-  scanner: { video: null, canvas: null, ctx: null, stream: null, frameReq: null },
   songs: [],
   specials: { timeout: null, walkon: null, pauses: [] },
+  pairingCollapsed: false,
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   rtc.ui = {
     offerInput: document.getElementById("offer-input"),
     connectBtn: document.getElementById("connect-btn"),
-    scanOfferBtn: document.getElementById("scan-offer-btn"),
-    stopOfferScanBtn: document.getElementById("stop-offer-scan-btn"),
     answerOutput: document.getElementById("answer-output"),
-    answerQr: document.getElementById("answer-qr"),
     status: document.getElementById("remote-status"),
     log: document.getElementById("remote-log"),
     randomBtn: document.getElementById("random-btn"),
@@ -38,24 +42,19 @@ document.addEventListener("DOMContentLoaded", () => {
     timeoutBtn: document.getElementById("special-timeout"),
     walkonBtn: document.getElementById("special-walkon"),
     pausesContainer: document.getElementById("special-pauses"),
-    offerVideo: document.getElementById("offer-video"),
-    offerCanvas: document.getElementById("offer-canvas"),
     refreshBtn: document.getElementById("refresh-connection-btn"),
+    togglePairingBtn: document.getElementById("toggle-pairing"),
+    pairingSection: document.getElementById("pairing-section"),
+    pairingContent: document.getElementById("pairing-content"),
   };
-  rtc.scanner.video = rtc.ui.offerVideo;
-  rtc.scanner.canvas = rtc.ui.offerCanvas;
-  if (rtc.scanner.canvas) {
-    rtc.scanner.ctx = rtc.scanner.canvas.getContext("2d");
-  }
   bindRemoteUI();
+  loadStoredPairingUI();
   resetUIState();
 });
 
 function bindRemoteUI() {
   const {
     connectBtn,
-    scanOfferBtn,
-    stopOfferScanBtn,
     randomBtn,
     randomOpponentBtn,
     stopBtn,
@@ -63,15 +62,16 @@ function bindRemoteUI() {
     timeoutBtn,
     walkonBtn,
     refreshBtn,
+    togglePairingBtn,
   } = rtc.ui;
 
   if (connectBtn) connectBtn.addEventListener("click", connectWithOffer);
-  if (scanOfferBtn) scanOfferBtn.addEventListener("click", startOfferScan);
-  if (stopOfferScanBtn) stopOfferScanBtn.addEventListener("click", stopOfferScan);
   if (refreshBtn) refreshBtn.addEventListener("click", () => {
     resetUIState();
+    loadStoredPairingUI();
     connectWithOffer();
   });
+  if (togglePairingBtn) togglePairingBtn.addEventListener("click", togglePairing);
 
   if (randomBtn) randomBtn.addEventListener("click", () => sendCommand("randomStandard"));
   if (randomOpponentBtn) randomOpponentBtn.addEventListener("click", () => sendCommand("randomOpponent"));
@@ -86,16 +86,28 @@ function bindRemoteUI() {
   if (walkonBtn) walkonBtn.addEventListener("click", () => sendCommand("special", { type: "walkon" }));
 }
 
+function togglePairing() {
+  setPairingCollapsed(!rtc.pairingCollapsed);
+}
+
+function setPairingCollapsed(collapsed) {
+  rtc.pairingCollapsed = collapsed;
+  const content = rtc.ui.pairingContent;
+  const btn = rtc.ui.togglePairingBtn;
+  if (content) {
+    content.classList.toggle("hidden", collapsed);
+  }
+  if (btn) {
+    btn.textContent = collapsed ? "Ausklappen" : "Einklappen";
+  }
+}
+
 function resetUIState() {
   updateRemoteStatus("Getrennt");
   rtc.songs = [];
   rtc.specials = { timeout: null, walkon: null, pauses: [] };
   renderSongs([]);
   renderSpecials();
-  if (rtc.ui.answerOutput) rtc.ui.answerOutput.value = "";
-  if (rtc.ui.offerInput) rtc.ui.offerInput.value = "";
-  if (rtc.ui.answerQr) rtc.ui.answerQr.innerHTML = "";
-  stopOfferScan();
   closeConnection();
 }
 
@@ -141,12 +153,13 @@ async function connectWithOffer() {
       logRemote("Kein Offer im Feld.");
       return;
     }
-    const payload = decodeSignalPayload(offerText);
+    const payload = safeDecodeSignal(offerText);
     if (!payload || payload.type !== "offer") {
       logRemote("Ungültiger Offer.");
       updateRemoteStatus("Fehler");
       return;
     }
+    savePayload(STORAGE_KEYS.offer, payload);
     const pc = new RTCPeerConnection({ iceServers: [] });
     rtc.pc = pc;
     pc.ondatachannel = (event) => {
@@ -176,10 +189,10 @@ async function connectWithOffer() {
       ice: rtc.candidates,
     };
     const encoded = encodeSignalPayload(answerPayload);
+    savePayload(STORAGE_KEYS.answer, answerPayload);
     if (rtc.ui.answerOutput) rtc.ui.answerOutput.value = encoded;
-    renderAnswerQr(encoded);
     updateRemoteStatus("Answer bereit");
-    logRemote("Answer erstellt. QR/Text an den Player zeigen.");
+    logRemote("Answer erstellt. Text an den Player zurückgeben.");
   } catch (err) {
     console.error(err);
     logRemote(`Verbindungsfehler: ${err.message || err}`);
@@ -191,6 +204,7 @@ function wireDataChannel(channel) {
   channel.onopen = () => {
     updateRemoteStatus("Verbunden");
     logRemote("Channel offen. Songs werden angefragt...");
+    setPairingCollapsed(true);
     sendCommand("requestSongs");
   };
   channel.onclose = () => {
@@ -300,6 +314,51 @@ function decodeSignalPayload(text) {
   return JSON.parse(json);
 }
 
+function safeDecodeSignal(text) {
+  try {
+    const cleaned = (text || "").replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    return decodeSignalPayload(cleaned);
+  } catch (err) {
+    logRemote(`Dekodier-Fehler: ${err.message || err}`);
+    return null;
+  }
+}
+
+function savePayload(key, obj) {
+  try {
+    localStorage.setItem(key, JSON.stringify(obj));
+    const textKey = key === STORAGE_KEYS.offer ? STORAGE_KEYS.offerText : key === STORAGE_KEYS.answer ? STORAGE_KEYS.answerText : null;
+    if (textKey) {
+      localStorage.setItem(textKey, encodeSignalPayload(obj));
+    }
+  } catch (err) {
+    console.warn("Speichern fehlgeschlagen", err);
+  }
+}
+
+function loadPayload(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+}
+
+function loadStoredPairingUI() {
+  const offer = loadPayload(STORAGE_KEYS.offer);
+  const answer = loadPayload(STORAGE_KEYS.answer);
+  const offerTextRaw = localStorage.getItem(STORAGE_KEYS.offerText);
+  const answerTextRaw = localStorage.getItem(STORAGE_KEYS.answerText);
+  if (offer && rtc.ui.offerInput) {
+    rtc.ui.offerInput.value = offerTextRaw || encodeSignalPayload(offer);
+  }
+  if (answer && rtc.ui.answerOutput) {
+    rtc.ui.answerOutput.value = answerTextRaw || encodeSignalPayload(answer);
+  }
+}
+
 function waitForIce(pc) {
   return new Promise((resolve) => {
     if (!pc || pc.iceGatheringState === "complete") {
@@ -314,72 +373,4 @@ function waitForIce(pc) {
     };
     pc.addEventListener("icegatheringstatechange", handler);
   });
-}
-
-function renderAnswerQr(text) {
-  const target = rtc.ui.answerQr;
-  if (!target) return;
-  target.innerHTML = "";
-  if (typeof QRCode === "undefined") {
-    target.textContent = "QR-Bibliothek fehlt.";
-    return;
-  }
-  new QRCode(target, { text, width: 160, height: 160, correctLevel: QRCode.CorrectLevel.L });
-}
-
-async function startOfferScan() {
-  const { video, canvas } = rtc.scanner;
-  const { scanOfferBtn, stopOfferScanBtn } = rtc.ui;
-  if (!video || !canvas) return;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-    rtc.scanner.stream = stream;
-    video.srcObject = stream;
-    await video.play();
-    video.classList.remove("hidden");
-    if (scanOfferBtn) scanOfferBtn.classList.add("hidden");
-    if (stopOfferScanBtn) stopOfferScanBtn.classList.remove("hidden");
-    tickOfferScan();
-    logRemote("Scanner gestartet.");
-  } catch (err) {
-    console.error(err);
-    logRemote("Kamera/Scanner nicht verfügbar.");
-  }
-}
-
-function tickOfferScan() {
-  const { video, canvas, ctx } = rtc.scanner;
-  if (!video || !canvas || !ctx) return;
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    if (typeof jsQR !== "undefined") {
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-      if (code && code.data) {
-        stopOfferScan();
-        if (rtc.ui.offerInput) rtc.ui.offerInput.value = code.data;
-        logRemote("Offer-QR gelesen.");
-        return;
-      }
-    }
-  }
-  rtc.scanner.frameReq = requestAnimationFrame(tickOfferScan);
-}
-
-function stopOfferScan() {
-  const { stream, frameReq, video } = rtc.scanner;
-  const { scanOfferBtn, stopOfferScanBtn } = rtc.ui;
-  if (frameReq) cancelAnimationFrame(frameReq);
-  rtc.scanner.frameReq = null;
-  if (stream) stream.getTracks().forEach((t) => t.stop());
-  rtc.scanner.stream = null;
-  if (video) {
-    video.pause();
-    video.srcObject = null;
-    video.classList.add("hidden");
-  }
-  if (scanOfferBtn) scanOfferBtn.classList.remove("hidden");
-  if (stopOfferScanBtn) stopOfferScanBtn.classList.add("hidden");
 }

@@ -17,36 +17,31 @@
       <div class="text-xs text-gray-300">Ohne Internet, lokales Netz/Hotspot</div>
     </header>
 
-    <section class="bg-gray-800 rounded-lg p-4 shadow space-y-3">
-      <div class="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
-        <div class="flex-1 space-y-2">
-          <div class="font-semibold text-sm">1. Player-Offer scannen/einfügen</div>
-          <textarea id="offer-input" class="w-full h-24 text-black p-2 rounded" placeholder="Offer hier einfügen oder QR scannen"></textarea>
-          <div class="flex items-center space-x-2">
-            <button id="connect-btn" class="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded">Mit Player verbinden</button>
-            <button id="scan-offer-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded">Offer scannen</button>
-            <button id="stop-offer-scan-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded hidden">Scan stoppen</button>
-          </div>
-          <div class="relative">
-            <video id="offer-video" class="w-full rounded hidden" playsinline></video>
-            <canvas id="offer-canvas" class="hidden"></canvas>
-          </div>
-        </div>
-        <div class="flex-1 space-y-2">
-          <div class="font-semibold text-sm">2. Answer anzeigen/teilen</div>
-          <textarea id="answer-output" class="w-full h-24 text-black p-2 rounded" readonly></textarea>
-          <div class="flex items-center space-x-2">
-            <button id="refresh-connection-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded">Neu koppeln</button>
-          </div>
-          <div class="flex items-center space-x-3">
-            <div id="answer-qr" class="bg-white p-2 rounded"></div>
-            <div class="text-xs text-gray-400">
-              Schritte: Offer scannen → Answer QR/Text zum Player zeigen → Auf „Verbunden“ warten.
+    <section id="pairing-section" class="bg-gray-800 rounded-lg p-4 shadow space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="font-semibold text-sm">Remote-Pairing</div>
+        <button id="toggle-pairing" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">Einklappen</button>
+      </div>
+      <div id="pairing-content" class="space-y-3">
+        <div class="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
+          <div class="flex-1 space-y-2">
+            <div class="font-semibold text-sm">1. Player-Offer einfügen</div>
+            <textarea id="offer-input" class="w-full h-24 text-black p-2 rounded" placeholder="Offer hier einfügen"></textarea>
+            <div class="flex items-center space-x-2">
+              <button id="connect-btn" class="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded">Mit Player verbinden</button>
             </div>
           </div>
+          <div class="flex-1 space-y-2">
+            <div class="font-semibold text-sm">2. Answer anzeigen/teilen</div>
+            <textarea id="answer-output" class="w-full h-24 text-black p-2 rounded" readonly></textarea>
+            <div class="flex items-center space-x-2">
+              <button id="refresh-connection-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded">Neu koppeln</button>
+            </div>
+            <div class="text-xs text-gray-400">Schritte: Offer einfügen → Answer zurück zum Player kopieren → auf „Verbunden“ warten.</div>
+          </div>
         </div>
+        <div id="remote-log" class="text-xs text-gray-400 h-16 overflow-auto"></div>
       </div>
-      <div id="remote-log" class="text-xs text-gray-400 h-16 overflow-auto"></div>
     </section>
 
     <section class="bg-gray-800 rounded-lg p-4 shadow space-y-3">
@@ -83,8 +78,6 @@
     </section>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="remote.js"></script>
 </body>
 </html>
