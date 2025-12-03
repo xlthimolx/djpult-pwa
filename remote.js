@@ -325,38 +325,16 @@ function safeDecodeSignal(text) {
 }
 
 function savePayload(key, obj) {
-  try {
-    localStorage.setItem(key, JSON.stringify(obj));
-    const textKey = key === STORAGE_KEYS.offer ? STORAGE_KEYS.offerText : key === STORAGE_KEYS.answer ? STORAGE_KEYS.answerText : null;
-    if (textKey) {
-      localStorage.setItem(textKey, encodeSignalPayload(obj));
-    }
-  } catch (err) {
-    console.warn("Speichern fehlgeschlagen", err);
-  }
+  // keine Persistenz gewünscht – Felder sollen nach Reload leer sein
 }
 
 function loadPayload(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (err) {
-    return null;
-  }
+  return null;
 }
 
 function loadStoredPairingUI() {
-  const offer = loadPayload(STORAGE_KEYS.offer);
-  const answer = loadPayload(STORAGE_KEYS.answer);
-  const offerTextRaw = localStorage.getItem(STORAGE_KEYS.offerText);
-  const answerTextRaw = localStorage.getItem(STORAGE_KEYS.answerText);
-  if (offer && rtc.ui.offerInput) {
-    rtc.ui.offerInput.value = offerTextRaw || encodeSignalPayload(offer);
-  }
-  if (answer && rtc.ui.answerOutput) {
-    rtc.ui.answerOutput.value = answerTextRaw || encodeSignalPayload(answer);
-  }
+  if (rtc.ui.offerInput) rtc.ui.offerInput.value = "";
+  if (rtc.ui.answerOutput) rtc.ui.answerOutput.value = "";
 }
 
 function waitForIce(pc) {
