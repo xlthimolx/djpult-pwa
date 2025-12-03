@@ -1000,6 +1000,7 @@ function wireDataChannel(channel) {
     rtcState.status = "connected";
     updatePairingStatus("Verbunden");
     logPairing("Remote verbunden.");
+    unlockAudioForRemote();
     sendSongsListToRemote();
   };
   channel.onclose = () => {
@@ -1186,6 +1187,29 @@ function waitForIceComplete(pc) {
     };
     pc.addEventListener("icegatheringstatechange", checkState);
   });
+}
+
+function unlockAudioForRemote() {
+  const el = getAudioElement();
+  if (!el) return;
+  ensureAudioGraph();
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
+  // Versuch, Autoplay-Sperre zu loesen: kurz stumm spielen/pause
+  try {
+    const prevMuted = el.muted;
+    el.muted = true;
+    el.play().then(() => {
+      el.pause();
+      el.muted = prevMuted;
+      if (gainNode) gainNode.gain.value = volumeLevel;
+    }).catch(() => {
+      el.muted = prevMuted;
+    });
+  } catch (err) {
+    console.warn("Unlock fehlgeschlagen", err);
+  }
 }
 
 async function startAnswerScan() {

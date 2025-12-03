@@ -3,6 +3,10 @@ body {
   overflow: hidden;
 }
 
+.allow-scroll {
+  overflow: auto;
+}
+
 .song-button {
   width: 100%;
   padding-top: 0.5rem;
