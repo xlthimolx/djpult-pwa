@@ -39,18 +39,32 @@
       </button>
       <div id="info-panel" class="fixed top-10 right-10 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow max-w-sm hidden info-panel">
         <div class="font-semibold mb-1">Aktuelle &Auml;nderungen</div>
-        <ul class="list-disc list-inside space-y-1">
-          <li>Suche: Treffer werden hervorgehoben und die Suche leert sich nach dem Klick auf einen Song.</li>
-          <li>Zufalls-Buttons: gewichten selten gespielte Titel h&ouml;her; Gegner-Zufall nutzt nur Kategorie Gegner.</li>
-          <li>Play-Counter &amp; Heatmap: Badges, Gewichtung pro Kategorie (au&szlig;er Spa&szlig;/Specials), lokal gespeichert.</li>
-          <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
-          <li>Reset-Button: setzt alle Play-Counter zur&uuml;ck.</li>
-          <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei &lt;10s.</li>
-          <li><strong>Tagging</strong>: `_HIT`/`_ACE` &rarr; Ass/Angriff, `_BLOCK` &rarr; Block, `_OPP` &rarr; Gegner, `_FUN` &rarr; Lustig. Kein Tag &rarr; wird auf Sonstiges/Noch mehr verteilt.</li>
-          <li><strong>Spezial-Tracks</strong> (Ordner `special_music/`): `_TIMEOUT`, `_WALKON`, `_PAUSE1/2/3...` werden zu den Spezial-Buttons; Pausen werden dynamisch als Liste angezeigt.</li>
-          <li><strong>Dateinamen</strong>: `_PAUSE<number>`-Suffix wird f&uuml;r die Anzeige entfernt, sonst bleibt der Name nach dem Bereinigen (Endung + Tag entfernt).</li>
-          <li><strong>Ablage</strong>: Normale Musikdateien in `static/music/` (oder geladenes Verzeichnis); Spezialtracks in `static/special_music/`.</li>
-        </ul>
+        <div class="space-y-2">
+          <div>
+            <div class="font-semibold">Funktionen</div>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Suche: Treffer werden hervorgehoben und die Suche leert sich nach Klick auf einen Song.</li>
+              <li>Zufall: gewichtet selten gespielte Titel h&ouml;her; Gegner-Zufall nutzt nur Kategorie Gegner.</li>
+              <li>Play-Counter &amp; Heatmap: Badges, Gewichtung pro Kategorie (au&szlig;er Spa&szlig;/Specials), lokal gespeichert.</li>
+              <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
+              <li>Reset-Button: setzt alle Play-Counter zur&uuml;ck.</li>
+              <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei &lt;10s.</li>
+              <li><strong>Tagging</strong>: `_HIT`/`_ACE` &rarr; Ass/Angriff, `_BLOCK` &rarr; Block, `_OPP` &rarr; Gegner, `_FUN` &rarr; Lustig. Ohne Tag &rarr; Sonstiges/Noch mehr.</li>
+              <li><strong>Spezial-Tracks</strong> (`special_music/`): `_TIMEOUT`, `_WALKON`, `_PAUSE1/2/3...` f&uuml;r Spezial-Buttons; Pausen werden dynamisch gelistet.</li>
+              <li><strong>Ablage</strong>: Normale Musikdateien in `static/music/` (oder geladenes Verzeichnis); Spezialtracks in `static/special_music/`.</li>
+            </ul>
+          </div>
+          <div>
+            <div class="font-semibold">Aktuelle Änderungen</div>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Suche mit Auto-Clear &amp; Highlight.</li>
+              <li>Gewichtete Zuf&auml;lle (Standard + Gegner).</li>
+              <li>Header einklappbar f&uuml;r mehr Platz.</li>
+              <li>Pause-Buttons dynamisch aus `_PAUSE`-Tracks.</li>
+              <li>Scroll-Anpassungen: Kategorien scrollen getrennt, globales Scroll deaktiviert.</li>
+            </ul>
+          </div>
+        </div>
       </div>
       <!-- Zoom Controls -->
       <div class="fixed top-2 left-2 bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow flex items-center space-x-2">
