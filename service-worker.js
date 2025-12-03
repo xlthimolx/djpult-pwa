@@ -1,4 +1,4 @@
-const CACHE_NAME = "djpult-cache-v1";
+const CACHE_NAME = "djpult-cache-v2";
 
 const MUSIC_FILES = [
   "16_FUN.flac",
@@ -61,7 +61,9 @@ const SPECIAL_FILES = [
 const ASSETS = [
   "./",
   "./index.html",
+  "./remote.html",
   "./script.js",
+  "./remote.js",
   "./style.css",
   "./manifest.json",
   "./icon-192.png",

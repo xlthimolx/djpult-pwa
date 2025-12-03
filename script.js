@@ -5,7 +5,7 @@ let mediaElementSource = null; // MediaElementSource fuer das zentrale Audio
 let currentAudio = null;
 let volumeLevel = 1.0;
 let fadeIntervalId = null;
-let nowPlaying = { title: "", duration: 0 };
+let nowPlaying = { title: "", duration: 0, category: null };
 let nowPlayingEls = { box: null, title: null, eta: null };
 const NOW_PLAYING_WARNING_THRESHOLD = 10; // Sekunden
 let songPlayCounts = {};
@@ -47,6 +47,17 @@ const specialTracks = {
   timeout: null,
   walkon: null,
   pauses: [],
+};
+
+const remoteCategories = ["ass_angriff", "block", "spass", "sonstiges", "noch_mehr", "noch_mehr2"];
+
+const rtcState = {
+  pc: null,
+  channel: null,
+  offerCandidates: [],
+  status: "disconnected",
+  ui: {},
+  scanner: { stream: null, frameReq: null, video: null, canvas: null, ctx: null },
 };
 
 function cleanName(filename) {
@@ -137,6 +148,7 @@ function handleFiles(fileList) {
   renderCategories();
   updateSpecialButtons();
   collapseHeader();
+  sendSongsListToRemote();
 }
 
 function getAudioElement() {
@@ -273,15 +285,20 @@ function playAudio(file, displayTitle = "", categoryKey = null, songId = null) {
   }
 
   currentAudio = el;
+  nowPlaying.category = categoryKey || null;
   incrementPlayCount(songId || displayTitle || file, categoryKey);
   showNowPlaying(displayTitle);
   if (audioCtx && audioCtx.state === "suspended") {
     audioCtx.resume().catch((err) => console.warn("Konnte AudioContext nicht resumieren:", err));
   }
-  el.onloadedmetadata = () => updateNowPlayingDuration(el);
+  el.onloadedmetadata = () => {
+    updateNowPlayingDuration(el);
+    sendNowPlayingStatus({ title: displayTitle, category: categoryKey, duration: el.duration || 0 });
+  };
   el.ontimeupdate = () => updateNowPlayingEta(el);
   el.onended = () => clearNowPlaying();
   el.play().catch((err) => console.error("Audio-Wiedergabe blockiert oder fehlgeschlagen:", err));
+  sendNowPlayingStatus({ title: displayTitle, category: categoryKey });
 }
 
 function stopAudio(forceImmediate = false) {
@@ -298,6 +315,8 @@ function stopAudio(forceImmediate = false) {
   const fadeInterval = fadeOutTime / fadeSteps;
   const canGainFade = !!gainNode;
   const shouldFade = !forceImmediate;
+
+  sendNowPlayingStatus({ title: "", category: null, duration: 0, stopped: true });
 
   if (shouldFade && canGainFade) {
     const startGain = gainNode.gain.value || volumeLevel || 1;
@@ -402,10 +421,11 @@ function updateNowPlayingEta(el) {
 
 function clearNowPlaying() {
   const { box, eta } = nowPlayingEls;
-  nowPlaying = { title: "", duration: 0 };
+  nowPlaying = { title: "", duration: 0, category: null };
   if (eta) eta.textContent = "--:--";
   if (box) box.classList.add("hidden");
   toggleNowPlayingWarning(Infinity);
+  sendNowPlayingStatus({ title: "", category: null, duration: 0, stopped: true });
 }
 
 function formatTime(sec) {
@@ -446,8 +466,28 @@ document.addEventListener("DOMContentLoaded", () => {
     input: document.getElementById("search-input"),
     count: document.getElementById("search-count"),
   };
+  rtcState.ui = {
+    panel: document.getElementById("pairing-panel"),
+    toggle: document.getElementById("pairing-toggle"),
+    status: document.getElementById("pairing-status"),
+    offerText: document.getElementById("player-offer-text"),
+    answerText: document.getElementById("player-answer-text"),
+    offerQr: document.getElementById("player-offer-qr"),
+    log: document.getElementById("pairing-log"),
+    createOfferBtn: document.getElementById("create-offer-btn"),
+    refreshOfferBtn: document.getElementById("refresh-offer-btn"),
+    applyAnswerBtn: document.getElementById("apply-answer-btn"),
+    scanAnswerBtn: document.getElementById("scan-answer-btn"),
+    stopScanBtn: document.getElementById("stop-scan-btn"),
+  };
+  rtcState.scanner.video = document.getElementById("answer-video");
+  rtcState.scanner.canvas = document.getElementById("answer-canvas");
+  if (rtcState.scanner.canvas) {
+    rtcState.scanner.ctx = rtcState.scanner.canvas.getContext("2d");
+  }
   initZoomControls();
   initSearchControls();
+  initPairingUI();
 
   const fileInput = document.getElementById("filepicker");
   const loadButton = document.getElementById("load-songs-btn");
@@ -788,4 +828,422 @@ function playRandomOpponentTrack() {
     }
   }
   playAudio(chosen.song.url, chosen.song.display, "gegner", chosen.song.id);
+}
+
+// -----------------------------
+// WebRTC Remote-Control (Player)
+// -----------------------------
+
+function initPairingUI() {
+  const { toggle, panel, createOfferBtn, refreshOfferBtn, applyAnswerBtn, scanAnswerBtn, stopScanBtn } = rtcState.ui;
+  if (toggle && panel) {
+    toggle.addEventListener("click", () => {
+      panel.classList.toggle("hidden");
+    });
+  }
+  if (createOfferBtn) createOfferBtn.addEventListener("click", startPlayerOffer);
+  if (refreshOfferBtn) refreshOfferBtn.addEventListener("click", () => {
+    cleanupPlayerRTC();
+    resetPairingUI();
+    startPlayerOffer();
+  });
+  if (applyAnswerBtn) applyAnswerBtn.addEventListener("click", applyAnswerFromInput);
+  if (scanAnswerBtn) scanAnswerBtn.addEventListener("click", startAnswerScan);
+  if (stopScanBtn) stopScanBtn.addEventListener("click", stopAnswerScan);
+}
+
+function resetPairingUI() {
+  const { offerText, answerText, offerQr, log, status } = rtcState.ui;
+  if (offerText) offerText.value = "";
+  if (answerText) answerText.value = "";
+  if (offerQr) offerQr.innerHTML = "";
+  if (log) log.textContent = "";
+  if (status) status.textContent = "Getrennt";
+}
+
+function updatePairingStatus(text) {
+  if (rtcState.ui.status) {
+    rtcState.ui.status.textContent = text;
+  }
+}
+
+function logPairing(message) {
+  const el = rtcState.ui.log;
+  if (!el) return;
+  const ts = new Date().toLocaleTimeString();
+  el.textContent = `[${ts}] ${message}\n${el.textContent}`.slice(0, 2000);
+}
+
+function cleanupPlayerRTC() {
+  if (rtcState.channel) {
+    try {
+      rtcState.channel.close();
+    } catch (e) {
+      console.warn("Channel close failed", e);
+    }
+  }
+  if (rtcState.pc) {
+    try {
+      rtcState.pc.close();
+    } catch (e) {
+      console.warn("PC close failed", e);
+    }
+  }
+  rtcState.pc = null;
+  rtcState.channel = null;
+  rtcState.offerCandidates = [];
+  rtcState.status = "disconnected";
+  stopAnswerScan();
+  updatePairingStatus("Getrennt");
+}
+
+async function startPlayerOffer() {
+  try {
+    cleanupPlayerRTC();
+    updatePairingStatus("Verbinde...");
+    logPairing("Erzeuge Offer...");
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    rtcState.pc = pc;
+    rtcState.offerCandidates = [];
+    const channel = pc.createDataChannel("remote");
+    rtcState.channel = channel;
+    wireDataChannel(channel);
+    pc.onicecandidate = (ev) => {
+      if (ev.candidate) {
+        rtcState.offerCandidates.push(ev.candidate);
+      }
+    };
+    pc.oniceconnectionstatechange = () => {
+      logPairing(`ICE: ${pc.iceConnectionState}`);
+    };
+    pc.onconnectionstatechange = () => {
+      logPairing(`Connection: ${pc.connectionState}`);
+      if (pc.connectionState === "disconnected" || pc.connectionState === "failed") {
+        updatePairingStatus("Getrennt");
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await waitForIceComplete(pc);
+    const payload = {
+      type: "offer",
+      sdp: pc.localDescription.sdp,
+      ice: rtcState.offerCandidates,
+    };
+    const encoded = encodeSignalPayload(payload);
+    renderOfferQr(encoded);
+    if (rtcState.ui.offerText) rtcState.ui.offerText.value = encoded;
+    updatePairingStatus("Offer bereit");
+    logPairing("Offer bereit. QR/Text an Remote senden.");
+  } catch (err) {
+    console.error(err);
+    logPairing(`Fehler beim Offer: ${err.message || err}`);
+    updatePairingStatus("Fehler");
+  }
+}
+
+function renderOfferQr(text) {
+  const target = rtcState.ui.offerQr;
+  if (!target) return;
+  target.innerHTML = "";
+  if (typeof QRCode === "undefined") {
+    target.textContent = "QR-Bibliothek fehlt.";
+    return;
+  }
+  new QRCode(target, {
+    text,
+    width: 160,
+    height: 160,
+    correctLevel: QRCode.CorrectLevel.L,
+  });
+}
+
+async function applyAnswerFromInput() {
+  try {
+    if (!rtcState.pc) {
+      logPairing("Kein aktiver Offer. Bitte neu starten.");
+      return;
+    }
+    const text = (rtcState.ui.answerText?.value || "").trim();
+    if (!text) {
+      logPairing("Keine Answer im Feld gefunden.");
+      return;
+    }
+    const payload = decodeSignalPayload(text);
+    if (!payload || payload.type !== "answer" || !payload.sdp) {
+      logPairing("Ungültige Answer.");
+      return;
+    }
+    await rtcState.pc.setRemoteDescription(new RTCSessionDescription({ type: payload.type, sdp: payload.sdp }));
+    if (Array.isArray(payload.ice)) {
+      for (const cand of payload.ice) {
+        try {
+          await rtcState.pc.addIceCandidate(new RTCIceCandidate(cand));
+        } catch (err) {
+          console.warn("Konnte ICE-Kandidat nicht setzen:", err);
+        }
+      }
+    }
+    updatePairingStatus("Answer gesetzt");
+    logPairing("Answer übernommen. Warte auf DataChannel...");
+  } catch (err) {
+    console.error(err);
+    logPairing(`Fehler beim Anwenden der Answer: ${err.message || err}`);
+    updatePairingStatus("Fehler");
+  }
+}
+
+function wireDataChannel(channel) {
+  if (!channel) return;
+  channel.onopen = () => {
+    rtcState.status = "connected";
+    updatePairingStatus("Verbunden");
+    logPairing("Remote verbunden.");
+    sendSongsListToRemote();
+  };
+  channel.onclose = () => {
+    rtcState.status = "disconnected";
+    updatePairingStatus("Getrennt");
+    logPairing("Remote getrennt.");
+  };
+  channel.onerror = (err) => logPairing(`Channel-Fehler: ${err?.message || err}`);
+  channel.onmessage = handleRemoteMessage;
+}
+
+function handleRemoteMessage(event) {
+  let msg = null;
+  try {
+    msg = JSON.parse(event.data);
+  } catch (err) {
+    console.warn("Ungültige Nachricht", err);
+    return;
+  }
+  if (!msg) return;
+  if (msg.type === "command") {
+    handleRemoteCommand(msg.command, msg.payload || {});
+  }
+}
+
+function handleRemoteCommand(command, payload) {
+  switch (command) {
+    case "play": {
+      const ok = playSongFromRemote(payload);
+      if (!ok) logPairing("Song nicht gefunden.");
+      break;
+    }
+    case "stop":
+      stopAudio();
+      break;
+    case "randomStandard":
+      playRandomTrack();
+      break;
+    case "randomOpponent":
+      playRandomOpponentTrack();
+      break;
+    case "special":
+      handleSpecialFromRemote(payload);
+      break;
+    case "volume":
+      handleRemoteVolume(payload);
+      break;
+    case "requestSongs":
+      sendSongsListToRemote();
+      break;
+    default:
+      logPairing(`Unbekannter Command: ${command}`);
+  }
+  sendAck(command);
+}
+
+function playSongFromRemote(payload) {
+  if (!payload) return false;
+  const { id, category } = payload;
+  if (!id || !category) return false;
+  const song = findSongById(category, id);
+  if (!song) return false;
+  playAudio(song.url, song.display, category, song.id);
+  return true;
+}
+
+function findSongById(categoryKey, songId) {
+  const cat = categories[categoryKey];
+  if (!cat || !Array.isArray(cat.items)) return null;
+  return cat.items.find((song) => song.id === songId || song.name === songId) || null;
+}
+
+function handleSpecialFromRemote(payload) {
+  if (!payload || !payload.type) return;
+  if (payload.type === "timeout" && specialTracks.timeout) {
+    playAudio(specialTracks.timeout.url, specialTracks.timeout.display || "Timeout");
+    return;
+  }
+  if (payload.type === "walkon" && specialTracks.walkon) {
+    playAudio(specialTracks.walkon.url, specialTracks.walkon.display || "Walk-On");
+    return;
+  }
+  if (payload.type === "pause") {
+    const id = payload.id;
+    const target = specialTracks.pauses.find(
+      (p) => p.number === Number(id) || p.display === id || p.name === id || (typeof id === "string" && id && p.display === id)
+    );
+    if (target) {
+      const label = target.display || `Pause ${target.number || ""}`;
+      playAudio(target.url, label);
+    }
+  }
+}
+
+function handleRemoteVolume(payload) {
+  if (!payload || typeof payload.value === "undefined") return;
+  let val = Number(payload.value);
+  if (val > 1) {
+    val = val / 100;
+  }
+  val = Math.min(1, Math.max(0, val));
+  setVolume(val);
+}
+
+function sendChannelMessage(obj) {
+  if (!rtcState.channel || rtcState.channel.readyState !== "open") return;
+  try {
+    rtcState.channel.send(JSON.stringify(obj));
+  } catch (err) {
+    console.warn("Konnte Nachricht nicht senden:", err);
+  }
+}
+
+function sendAck(command) {
+  sendChannelMessage({ type: "ack", command });
+}
+
+function sendSongsListToRemote() {
+  if (!rtcState.channel || rtcState.channel.readyState !== "open") return;
+  const payload = buildSongsListPayload();
+  sendChannelMessage({ type: "songsList", data: payload });
+}
+
+function buildSongsListPayload() {
+  const songs = [];
+  remoteCategories.forEach((key) => {
+    const cat = categories[key];
+    if (!cat || !Array.isArray(cat.items)) return;
+    cat.items.forEach((song) => {
+      songs.push({ id: song.id, display: song.display, category: key });
+    });
+  });
+  const specials = {
+    timeout: specialTracks.timeout
+      ? { id: specialTracks.timeout.name, display: specialTracks.timeout.display || "Timeout" }
+      : null,
+    walkon: specialTracks.walkon
+      ? { id: specialTracks.walkon.name, display: specialTracks.walkon.display || "Walk-On" }
+      : null,
+    pauses: Array.isArray(specialTracks.pauses)
+      ? specialTracks.pauses.map((p) => ({
+          id: p.number || p.name,
+          display: p.display || `Pause ${p.number || ""}`,
+          number: p.number || null,
+        }))
+      : [],
+  };
+  return { songs, specials };
+}
+
+function sendNowPlayingStatus(data) {
+  if (!rtcState.channel || rtcState.channel.readyState !== "open") return;
+  const payload = {
+    title: data?.title || "",
+    category: data?.category || null,
+    duration: data?.duration || 0,
+    stopped: !!data?.stopped,
+  };
+  sendChannelMessage({ type: "nowPlaying", data: payload });
+}
+
+function encodeSignalPayload(obj) {
+  const json = JSON.stringify(obj);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+function decodeSignalPayload(str) {
+  const clean = (str || "").trim();
+  const json = decodeURIComponent(escape(atob(clean)));
+  return JSON.parse(json);
+}
+
+function waitForIceComplete(pc) {
+  return new Promise((resolve) => {
+    if (!pc || pc.iceGatheringState === "complete") {
+      resolve();
+      return;
+    }
+    const checkState = () => {
+      if (pc.iceGatheringState === "complete") {
+        pc.removeEventListener("icegatheringstatechange", checkState);
+        resolve();
+      }
+    };
+    pc.addEventListener("icegatheringstatechange", checkState);
+  });
+}
+
+async function startAnswerScan() {
+  const { video, canvas } = rtcState.scanner;
+  const { scanAnswerBtn, stopScanBtn } = rtcState.ui;
+  if (!video || !canvas) return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    rtcState.scanner.stream = stream;
+    video.srcObject = stream;
+    await video.play();
+    video.classList.remove("hidden");
+    canvas.classList.add("hidden");
+    if (scanAnswerBtn) scanAnswerBtn.classList.add("hidden");
+    if (stopScanBtn) stopScanBtn.classList.remove("hidden");
+    tickAnswerScan();
+    logPairing("Scanner gestartet.");
+  } catch (err) {
+    console.error(err);
+    logPairing("Kamera/Scanner nicht verfügbar.");
+  }
+}
+
+function tickAnswerScan() {
+  const { video, canvas, ctx } = rtcState.scanner;
+  if (!video || !canvas || !ctx) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (typeof jsQR !== "undefined") {
+      const code = jsQR(imageData.data, canvas.width, canvas.height);
+      if (code && code.data) {
+        stopAnswerScan();
+        if (rtcState.ui.answerText) rtcState.ui.answerText.value = code.data;
+        logPairing("Answer-QR gelesen. Bitte anwenden.");
+        return;
+      }
+    }
+  }
+  rtcState.scanner.frameReq = requestAnimationFrame(tickAnswerScan);
+}
+
+function stopAnswerScan() {
+  const { stream, frameReq, video } = rtcState.scanner;
+  const { scanAnswerBtn, stopScanBtn } = rtcState.ui;
+  if (frameReq) cancelAnimationFrame(frameReq);
+  rtcState.scanner.frameReq = null;
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+  rtcState.scanner.stream = null;
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+    video.classList.add("hidden");
+  }
+  if (scanAnswerBtn) scanAnswerBtn.classList.remove("hidden");
+  if (stopScanBtn) stopScanBtn.classList.add("hidden");
 }

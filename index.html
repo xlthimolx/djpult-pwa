@@ -15,12 +15,18 @@
           <h1 class="text-4xl font-bold mr-4">DJ Pult</h1>
           <img src="static/images/thumbnail_logo.png" alt="logo" class="h-15 w-12 shadow-lg" />
         </div>
-        <div class="flex items-center justify-center mb-4 space-x-3">
-          <button id="load-songs-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">
-            Songs laden
-          </button>
-          <input id="filepicker" type="file" class="hidden" accept="audio/*" multiple webkitdirectory />
-        </div>
+      <div class="flex items-center justify-center mb-4 space-x-3">
+        <button id="load-songs-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg">
+          Songs laden
+        </button>
+        <input id="filepicker" type="file" class="hidden" accept="audio/*" multiple webkitdirectory />
+        <button id="pairing-toggle" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg">
+          Remote koppeln
+        </button>
+        <a href="remote.html" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg" target="_blank" rel="noopener">
+          Remote öffnen
+        </a>
+      </div>
       </div>
       <!-- Now Playing Banner -->
       <div id="now-playing" class="fixed top-2 right-2 bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow hidden w-72 max-w-sm">
@@ -83,6 +89,47 @@
 
     <!-- Song-Kategorien (werden per JS gefüllt) -->
     <div class="grid grid-cols-7 gap-4 w-full" id="categories-grid"></div>
+
+    <!-- Pairing Panel -->
+    <div id="pairing-panel" class="bg-gray-800 text-white rounded-lg shadow p-4 mt-4 hidden">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold">Remote-Pairing</div>
+        <span id="pairing-status" class="text-xs text-gray-300">Getrennt</span>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-2">
+          <div class="text-sm text-gray-300">1. Offer erzeugen und als QR/Text teilen</div>
+          <div class="flex items-center space-x-2">
+            <button id="create-offer-btn" class="bg-indigo-600 hover:bg-indigo-700 px-3 py-2 rounded">Offer erzeugen</button>
+            <button id="refresh-offer-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded">Neu starten</button>
+          </div>
+          <textarea id="player-offer-text" class="w-full h-24 text-black p-2 rounded" readonly></textarea>
+          <div class="flex items-center space-x-3">
+            <div id="player-offer-qr" class="bg-white p-2 rounded"></div>
+            <div class="text-xs text-gray-400">
+              Hinweis: Beide Geräte müssen im gleichen Netz/Hotspot sein.
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="text-sm text-gray-300">2. Answer einfügen oder scannen</div>
+          <div class="flex items-center space-x-2">
+            <button id="apply-answer-btn" class="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded">Answer anwenden</button>
+            <button id="scan-answer-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded">Answer scannen</button>
+            <button id="stop-scan-btn" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded hidden">Scan stoppen</button>
+          </div>
+          <textarea id="player-answer-text" class="w-full h-24 text-black p-2 rounded" placeholder="Answer hier einfügen..."></textarea>
+          <div class="relative">
+            <video id="answer-video" class="w-full rounded hidden" playsinline></video>
+            <canvas id="answer-canvas" class="hidden"></canvas>
+          </div>
+          <div id="pairing-log" class="text-xs text-gray-400 h-12 overflow-auto"></div>
+        </div>
+      </div>
+      <div class="text-xs text-gray-400 mt-2">
+        Schritte: 1) Offer erzeugen & QR/Text an Remote senden. 2) Answer vom Remote per QR/Text importieren. 3) Status auf „Verbunden“ prüfen.
+      </div>
+    </div>
   </div>
 
   <!-- Untere Leiste mit Spezial-Buttons -->
@@ -112,6 +159,8 @@
   <!-- Zentrales Audio-Element fuer Desktop & iOS -->
   <audio id="dj-audio" preload="none" playsinline class="hidden"></audio>
 
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <script src="script.js"></script>
   <script>
     if ("serviceWorker" in navigator) {
