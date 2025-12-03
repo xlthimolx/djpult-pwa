@@ -41,11 +41,15 @@
         <div class="font-semibold mb-1">Aktuelle &Auml;nderungen</div>
         <ul class="list-disc list-inside space-y-1">
           <li>Suche: Treffer werden hervorgehoben und die Suche leert sich nach dem Klick auf einen Song.</li>
-          <li>Zufalls-Button: gewichtet nach wenigen Plays (bevorzugt selten gespielte Titel) aus Ass/Block/Sonstiges-Spalten.</li>
+          <li>Zufalls-Buttons: gewichten selten gespielte Titel h&ouml;her; Gegner-Zufall nutzt nur Kategorie Gegner.</li>
           <li>Play-Counter &amp; Heatmap: Badges, Gewichtung pro Kategorie (au&szlig;er Spa&szlig;/Specials), lokal gespeichert.</li>
           <li>3x Sonstiges-Spalten: ungetaggte Tracks werden verteilt.</li>
           <li>Reset-Button: setzt alle Play-Counter zur&uuml;ck.</li>
           <li>Now Playing: Titel + Restlaufzeit mit Warnblinken bei &lt;10s.</li>
+          <li><strong>Tagging</strong>: `_HIT`/`_ACE` &rarr; Ass/Angriff, `_BLOCK` &rarr; Block, `_OPP` &rarr; Gegner, `_FUN` &rarr; Lustig. Kein Tag &rarr; wird auf Sonstiges/Noch mehr verteilt.</li>
+          <li><strong>Spezial-Tracks</strong> (Ordner `special_music/`): `_TIMEOUT`, `_WALKON`, `_PAUSE1/2/3...` werden zu den Spezial-Buttons; Pausen werden dynamisch als Liste angezeigt.</li>
+          <li><strong>Dateinamen</strong>: `_PAUSE<number>`-Suffix wird f&uuml;r die Anzeige entfernt, sonst bleibt der Name nach dem Bereinigen (Endung + Tag entfernt).</li>
+          <li><strong>Ablage</strong>: Normale Musikdateien in `static/music/` (oder geladenes Verzeichnis); Spezialtracks in `static/special_music/`.</li>
         </ul>
       </div>
       <!-- Zoom Controls -->
