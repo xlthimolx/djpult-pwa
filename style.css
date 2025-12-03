@@ -7,6 +7,17 @@ body {
   overflow: auto;
 }
 
+.pairing-modal {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1100px, 94vw);
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  z-index: 50;
+}
+
 .sticky-card {
   position: sticky;
   top: 8px;

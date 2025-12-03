@@ -839,6 +839,9 @@ function initPairingUI() {
   if (toggle && panel) {
     toggle.addEventListener("click", () => {
       panel.classList.toggle("hidden");
+      if (!panel.classList.contains("hidden")) {
+        panel.scrollTop = 0;
+      }
     });
   }
   if (createOfferBtn) createOfferBtn.addEventListener("click", startPlayerOffer);
