@@ -94,7 +94,12 @@
     <div id="pairing-panel" class="bg-gray-800 text-white rounded-lg shadow p-4 mt-4 hidden pairing-modal">
       <div class="flex items-center justify-between mb-2">
         <div class="font-semibold">Remote-Pairing</div>
-        <span id="pairing-status" class="text-xs text-gray-300">Getrennt</span>
+        <div class="flex items-center space-x-2">
+          <span id="pairing-status" class="text-xs text-gray-300">Getrennt</span>
+          <button id="pairing-close-btn" class="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded">
+            Schließen
+          </button>
+        </div>
       </div>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="space-y-2">

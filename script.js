@@ -479,6 +479,7 @@ document.addEventListener("DOMContentLoaded", () => {
     applyAnswerBtn: document.getElementById("apply-answer-btn"),
     scanAnswerBtn: document.getElementById("scan-answer-btn"),
     stopScanBtn: document.getElementById("stop-scan-btn"),
+    closeBtn: document.getElementById("pairing-close-btn"),
   };
   rtcState.scanner.video = document.getElementById("answer-video");
   rtcState.scanner.canvas = document.getElementById("answer-canvas");
@@ -835,7 +836,7 @@ function playRandomOpponentTrack() {
 // -----------------------------
 
 function initPairingUI() {
-  const { toggle, panel, createOfferBtn, refreshOfferBtn, applyAnswerBtn, scanAnswerBtn, stopScanBtn } = rtcState.ui;
+  const { toggle, panel, createOfferBtn, refreshOfferBtn, applyAnswerBtn, scanAnswerBtn, stopScanBtn, closeBtn } = rtcState.ui;
   if (toggle && panel) {
     toggle.addEventListener("click", () => {
       panel.classList.toggle("hidden");
@@ -843,6 +844,9 @@ function initPairingUI() {
         panel.scrollTop = 0;
       }
     });
+  }
+  if (closeBtn && panel) {
+    closeBtn.addEventListener("click", () => panel.classList.add("hidden"));
   }
   if (createOfferBtn) createOfferBtn.addEventListener("click", startPlayerOffer);
   if (refreshOfferBtn) refreshOfferBtn.addEventListener("click", () => {
