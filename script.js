@@ -202,9 +202,15 @@ function renderCategories() {
     `;
     grid.appendChild(col);
     const container = col.querySelector(`#col-${key}`);
-    const isHeatmapCategory = ["ass_angriff", "block", "gegner", "sonstiges", "noch_mehr", "noch_mehr2"].includes(
-      key
-    );
+    const isHeatmapCategory = [
+      "ass_angriff",
+      "block",
+      "gegner",
+      "sonstiges",
+      "noch_mehr",
+      "noch_mehr2",
+      "spass",
+    ].includes(key);
 
     let minCount = Infinity;
     let maxCount = -Infinity;
@@ -533,7 +539,7 @@ function toggleNowPlayingWarning(remainingSeconds) {
 }
 
 function incrementPlayCount(id, categoryKey) {
-  if (!categoryKey || ["spass"].includes(categoryKey)) return;
+  if (!categoryKey) return;
   songPlayCounts[id] = (songPlayCounts[id] || 0) + 1;
   savePlayCounts();
   renderSingleCategory(categoryKey);
@@ -565,9 +571,15 @@ function renderSingleCategory(key) {
   if (!container) return;
   container.innerHTML = "";
 
-  const isHeatmapCategory = ["ass_angriff", "block", "gegner", "sonstiges", "noch_mehr", "noch_mehr2"].includes(
-    key
-  );
+  const isHeatmapCategory = [
+    "ass_angriff",
+    "block",
+    "gegner",
+    "sonstiges",
+    "noch_mehr",
+    "noch_mehr2",
+    "spass",
+  ].includes(key);
 
   let minCount = Infinity;
   let maxCount = -Infinity;
