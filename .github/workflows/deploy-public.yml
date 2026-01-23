@@ -26,6 +26,4 @@ jobs:
         env:
           TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
         run: |
-          git push https://x-access-token:${TOKEN}github.com/${{ env.PUBLIC_REPO }}.git HEAD:main --force
-
-
+          git push https://x-access-token:${TOKEN}@github.com/${{ env.PUBLIC_REPO }}.git HEAD:main --force
