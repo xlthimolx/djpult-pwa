@@ -15,6 +15,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Configure git identity
         run: |
@@ -25,7 +26,6 @@ jobs:
         env:
           TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
         run: |
-          git remote remove public || true
-          git remote add public https://x-access-token:${TOKEN}@github.com/${{ env.PUBLIC_REPO }}.git
-          git push public HEAD:main --force
+          git push https://x-access-token:${TOKEN}github.com/${{ env.PUBLIC_REPO }}.git HEAD:main --force
+
 
