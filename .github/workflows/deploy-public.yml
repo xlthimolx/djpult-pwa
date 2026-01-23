@@ -26,4 +26,8 @@ jobs:
         env:
           TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
         run: |
+          rm -rf .github
+          git add -A
+          git commit -m "Deploy to public" || true
           git push https://x-access-token:${TOKEN}@github.com/${{ env.PUBLIC_REPO }}.git HEAD:main --force
+
