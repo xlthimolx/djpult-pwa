@@ -1,0 +1,27 @@
+name: Deploy to Public Repo
+
+on:
+  workflow_dispatch:
+
+env:
+  PUBLIC_REPO: xlthimolx/djpult-pwa-puplic
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Push to public repo (overwrite main)
+        run: |
+          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/${{ env.PUBLIC_REPO }}.git
+          git push public HEAD:main --force
