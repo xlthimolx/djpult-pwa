@@ -22,6 +22,10 @@ jobs:
           git config user.email "actions@github.com"
 
       - name: Push to public repo (overwrite main)
+        env:
+          TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
         run: |
-          git remote add public https://x-access-token:${{ secrets.PUBLIC_REPO_TOKEN }}@github.com/${{ env.PUBLIC_REPO }}.git
+          git remote remove public || true
+          git remote add public https://x-access-token:${TOKEN}@github.com/${{ env.PUBLIC_REPO }}.git
           git push public HEAD:main --force
+
